@@ -46,6 +46,7 @@ functions:
         - "getusers/handler.js"
     events:
       - http:
+          private: true
           path: users/{id}
           method: GET
           request:
