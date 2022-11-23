@@ -3,17 +3,12 @@ service: crud-serverless-users
 provider:
   name: aws
   runtime: nodejs14.x
-  environment:
-    BUCKET: bucket-serverless-course-123213
   iam:
     role:
       statements:
         - Effect: Allow
           Action: 'dynamodb:*'
           Resource: arn:aws:dynamodb:us-east-1:471893938953:table/usersTable
-        - Effect: Allow
-          Action: 's3:*'
-          Resource: arn:aws:s3:::bucket-serverless-course-123213/*
 
 plugins:
   - serverless-offline
@@ -93,19 +88,7 @@ functions:
             parameters:
               paths:
                 id: true
-  signedS3URL:
-    handler: "signedS3URL/handler.signed"
-    package:
-      patterns:
-        - "signedS3URL/handler.js"
-    events:
-      - http:
-          path: signedurl
-          method: GET
-          request:
-            parameters:
-              querystrings:
-                filename: true
+
 
 resources:
   Resources:
