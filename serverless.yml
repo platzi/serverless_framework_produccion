@@ -15,9 +15,9 @@ provider:
   environment:
     BUCKET: bucket-serverless-course-123213
 
-plugins:
-  - serverless-offline
-  - serverless-dynamodb-local
+# plugins:
+#   - serverless-offline
+#   - serverless-dynamodb-local
 
 
 package:
@@ -106,6 +106,28 @@ functions:
             parameters:
               querystrings:
                 filename: true
+  thumbGenerator:
+    handler: thumbnail/handler.thumbnailGenerator
+    layers:
+      - { Ref: BaseLambdaLayer }
+    package:
+      patterns:
+        - "thumbnail/handler.js"
+    events:
+      - s3:
+          bucket: bucket-serverless-course-123213
+          event: s3:ObjectCreated:*
+          existing: true
+          rules:
+           - prefix: upload/
+
+layers:
+  base:
+    name: "prd-dependencies"
+    compatibleRuntimes:
+      - "nodejs14.x"
+    package:
+      artifact: nodejs.zip
 
 resources:
   Resources:
