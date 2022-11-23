@@ -3,6 +3,9 @@ service: crud-serverless-users
 provider:
   name: aws
   runtime: nodejs14.x
+  apiGateway:
+    apiKeys:
+      - user-crud-sls-app-apikey
   iam:
     role:
       statements:
