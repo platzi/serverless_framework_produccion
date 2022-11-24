@@ -19,10 +19,11 @@ provider:
     BUCKET: bucket-serverless-course-123213
     SECRET_EGG: ${ssm:/SECRET_EGG}
 
-# plugins:
-#   - serverless-offline
-#   - serverless-dynamodb-local
 
+plugins:
+  - serverless-apigateway-service-proxy
+  - serverless-lift
+  # - serverless-domain-manager
 
 package:
   individually: true
@@ -31,6 +32,13 @@ package:
 
 
 custom:
+  # customDomain:
+  #   domainName: slscourse.platzi.com
+  #   stage: dev
+  #   basePath: mapping
+  #   endpointType: 'regional'
+  #   securityPolicy: tls_1_2
+  #   apiType: rest
   dynamodb:
   # If you only want to use DynamoDB Local in some stages, declare them here
     stages:
@@ -41,6 +49,38 @@ custom:
       migrate: true
     # Uncomment only if you already have a DynamoDB running locally
     # noStart: true
+  apiGatewayServiceProxies:
+    - sqs:
+        path: /likeuser
+        method: post
+        queueName: likequeue
+        cors: true
+        response:
+          template:
+            # `success` is used when the integration response is 200
+            success: |-
+              { "message": "accepted" }
+            # `clientError` is used when the integration response is 400
+            clientError: |-
+              { "message": "there is an error in your request" }
+            # `serverError` is used when the integration response is 500
+            serverError: |-
+              { "message": "there was an error handling your request" }
+
+constructs:
+    sqs-queue:
+        type: queue
+        batchSize: 1
+        worker:
+            handler: likeuser/handler.likeuser
+            reservedConcurrency: 1
+            package:
+              patterns:
+                - "likeuser/handler.js"
+        extensions:
+          queue:
+            Properties:
+              QueueName: likequeue
 
 functions:
   custom-authorizer:
