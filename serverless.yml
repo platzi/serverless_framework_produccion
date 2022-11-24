@@ -3,6 +3,9 @@ service: crud-serverless-users
 provider:
   name: aws
   runtime: nodejs14.x
+  apiGateway:
+    apiKeys:
+      - crud-serverless-users-apikey
   iam:
     role:
       statements:
@@ -14,11 +17,13 @@ provider:
           Resource: arn:aws:s3:::bucket-serverless-course-123213/*
   environment:
     BUCKET: bucket-serverless-course-123213
+    SECRET_EGG: ${ssm:/SECRET_EGG}
 
-# plugins:
-#   - serverless-offline
-#   - serverless-dynamodb-local
 
+plugins:
+  - serverless-apigateway-service-proxy
+  - serverless-lift
+  # - serverless-domain-manager
 
 package:
   individually: true
@@ -27,6 +32,13 @@ package:
 
 
 custom:
+  # customDomain:
+  #   domainName: slscourse.platzi.com
+  #   stage: dev
+  #   basePath: mapping
+  #   endpointType: 'regional'
+  #   securityPolicy: tls_1_2
+  #   apiType: rest
   dynamodb:
   # If you only want to use DynamoDB Local in some stages, declare them here
     stages:
@@ -37,8 +49,45 @@ custom:
       migrate: true
     # Uncomment only if you already have a DynamoDB running locally
     # noStart: true
+  apiGatewayServiceProxies:
+    - sqs:
+        path: /likeuser
+        method: post
+        queueName: likequeue
+        cors: true
+        response:
+          template:
+            # `success` is used when the integration response is 200
+            success: |-
+              { "message": "accepted" }
+            # `clientError` is used when the integration response is 400
+            clientError: |-
+              { "message": "there is an error in your request" }
+            # `serverError` is used when the integration response is 500
+            serverError: |-
+              { "message": "there was an error handling your request" }
+
+constructs:
+    sqs-queue:
+        type: queue
+        batchSize: 1
+        worker:
+            handler: likeuser/handler.likeuser
+            reservedConcurrency: 1
+            package:
+              patterns:
+                - "likeuser/handler.js"
+        extensions:
+          queue:
+            Properties:
+              QueueName: likequeue
 
 functions:
+  custom-authorizer:
+    handler: authorizer/handler.authorize
+    package:
+      patterns:
+        - "authorizer/handler.js"
   get-users:
     handler: getusers/handler.getUsers
     package:
@@ -46,6 +95,7 @@ functions:
         - "getusers/handler.js"
     events:
       - http:
+          private: true
           path: users/{id}
           method: GET
           request:
@@ -60,6 +110,9 @@ functions:
     events:
       - http:
           path: users
+          authorizer:
+            name: custom-authorizer
+            resultTtlInSeconds: 15
           method: POST
           request:
             schemas:
@@ -127,7 +180,7 @@ layers:
     compatibleRuntimes:
       - "nodejs14.x"
     package:
-      artifact: nodejs.zip
+      artifact: app/nodejs.zip
 
 resources:
   Resources:
